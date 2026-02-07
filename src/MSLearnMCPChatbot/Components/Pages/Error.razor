@@ -1,0 +1,15 @@
+@page "/Error"
+@using System.Diagnostics
+
+<h3>An error occurred</h3>
+<p>Sorry, something went wrong. Please try again.</p>
+
+@code {
+    [CascadingParameter] private HttpContext? HttpContext { get; set; }
+    private string? RequestId { get; set; }
+
+    protected override void OnInitialized()
+    {
+        RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+    }
+}

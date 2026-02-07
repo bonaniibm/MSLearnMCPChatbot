@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>MSLearnMCPChatbot</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Azure AI Foundry Agent SDK — beta required for MCP types 
+         (MCPToolDefinition, MCPToolResource, SubmitToolApprovalAction, 
+          ToolApproval, RequiredMcpToolCall) -->
+    <PackageReference Include="Azure.AI.Agents.Persistent" Version="1.2.0-beta.3" />
+
+    <!-- Azure Identity for authentication -->
+    <PackageReference Include="Azure.Identity" Version="1.17.1" />
+
+    <!-- Markdown rendering -->
+    <PackageReference Include="Markdig" Version="0.39.1" />
+  </ItemGroup>
+
+</Project>

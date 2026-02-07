@@ -1,0 +1,268 @@
+@page "/"
+@rendermode InteractiveServer
+@inject AgentService AgentService
+@inject ILogger<Home> Logger
+@implements IAsyncDisposable
+
+<div class="chat-container">
+    <!-- Header -->
+    <header class="chat-header">
+        <div class="header-brand">
+            <div class="brand-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                </svg>
+            </div>
+            <div class="brand-text">
+                <h1>MS Learn MCP Chatbot</h1>
+                <span class="brand-subtitle">Powered by Azure AI Foundry &bull; Microsoft Learn MCP Server</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-icon" @onclick="StartNewConversation" title="New conversation">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Messages Area -->
+    <div class="chat-messages" @ref="_messagesContainer">
+        @if (!_messages.Any())
+        {
+            <div class="welcome-screen">
+                <div class="welcome-icon">
+                    <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M24 8C14.059 8 6 14.268 6 22c0 4.41 2.614 8.36 6.7 11.03L10 42l8.5-4.5C20.3 37.83 22.11 38 24 38c9.941 0 18-6.268 18-14S33.941 8 24 8z"/>
+                        <circle cx="16" cy="22" r="2" fill="currentColor"/>
+                        <circle cx="24" cy="22" r="2" fill="currentColor"/>
+                        <circle cx="32" cy="22" r="2" fill="currentColor"/>
+                    </svg>
+                </div>
+                <h2>Ask anything about Microsoft technologies</h2>
+                <p>This chatbot uses the <strong>Microsoft Learn MCP Server</strong> to search official documentation and provide accurate answers.</p>
+                <div class="suggestion-chips">
+                    <button class="chip" @onclick="OnClickSuggestion1">
+                        What is Azure AI Foundry?
+                    </button>
+                    <button class="chip" @onclick="OnClickSuggestion2">
+                        Semantic Kernel with .NET
+                    </button>
+                    <button class="chip" @onclick="OnClickSuggestion3">
+                        Azure Functions + MCP
+                    </button>
+                    <button class="chip" @onclick="OnClickSuggestion4">
+                        .NET on Container Apps
+                    </button>
+                </div>
+            </div>
+        }
+        else
+        {
+            @foreach (var message in _messages)
+            {
+                <div class="message @(message.IsUser ? "message-user" : "message-assistant")">
+                    <div class="message-avatar">
+                        @if (message.IsUser)
+                        {
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                            </svg>
+                        }
+                        else
+                        {
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                            </svg>
+                        }
+                    </div>
+                    <div class="message-body">
+                        <div class="message-meta">
+                            <span class="message-sender">@(message.IsUser ? "You" : "MS Learn Agent")</span>
+                            <span class="message-time">@message.Timestamp.ToLocalTime().ToString("h:mm tt")</span>
+                        </div>
+                        <div class="message-content">
+                            @if (message.IsStreaming)
+                            {
+                                <div class="typing-indicator">
+                                    <span></span><span></span><span></span>
+                                </div>
+                            }
+                            else
+                            {
+                                @((MarkupString)MarkdownService.ToHtml(message.Content))
+                            }
+                        </div>
+                        @if (message.ToolCallsUsed.Count > 0)
+                        {
+                            <div class="tool-calls-badge">
+                                <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12">
+                                    <path d="M14.85 3.15a.5.5 0 0 1 0 .7l-3 3a.5.5 0 0 1-.7 0l-1.5-1.5a.5.5 0 1 1 .7-.7L11.5 5.79l2.65-2.64a.5.5 0 0 1 .7 0zM8 12a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+                                </svg>
+                                <span>Used: @string.Join(", ", message.ToolCallsUsed)</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <!-- Input Area -->
+    <div class="chat-input-area">
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="error-banner">
+                <span>@_errorMessage</span>
+                <button @onclick="ClearError">&#x2715;</button>
+            </div>
+        }
+        <EditForm Model="@this" OnValidSubmit="HandleSubmit" FormName="chatForm">
+            <div class="input-form">
+                <textarea class="input-field"
+                          @bind="_userInput"
+                          @bind:event="oninput"
+                          @onkeydown="HandleKeyDown"
+                          placeholder="Ask about Microsoft technologies..."
+                          disabled="@_isProcessing"
+                          rows="1"></textarea>
+                <button class="btn-send" type="submit" disabled="@(_isProcessing || string.IsNullOrWhiteSpace(_userInput))">
+                    @if (_isProcessing)
+                    {
+                        <div class="spinner"></div>
+                    }
+                    else
+                    {
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                        </svg>
+                    }
+                </button>
+            </div>
+        </EditForm>
+        <div class="input-footer">
+            <span>Azure AI Foundry Agent + Microsoft Learn MCP &bull; Responses may not always be accurate</span>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly List<ChatMessage> _messages = [];
+    private string _userInput = string.Empty;
+    private bool _isProcessing;
+    private string? _errorMessage;
+    private string? _threadId;
+    private ElementReference _messagesContainer;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_messages.Count > 0)
+        {
+            await ScrollToBottom();
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(_userInput) || _isProcessing)
+            return;
+
+        await SendMessage(_userInput.Trim());
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await HandleSubmit();
+        }
+    }
+
+    // Named handlers for suggestion chips — avoids nested double-quote issues in Razor
+    private Task OnClickSuggestion1() => SendSuggestion("What is Azure AI Foundry and what are its main features?");
+    private Task OnClickSuggestion2() => SendSuggestion("Explain how to use Semantic Kernel with .NET for building AI agents");
+    private Task OnClickSuggestion3() => SendSuggestion("How do I set up Azure Functions with MCP server support?");
+    private Task OnClickSuggestion4() => SendSuggestion("What are the best practices for deploying .NET applications to Azure Container Apps?");
+
+    private async Task SendSuggestion(string text)
+    {
+        await SendMessage(text);
+    }
+
+    private void ClearError()
+    {
+        _errorMessage = null;
+    }
+
+    private async Task SendMessage(string text)
+    {
+        _isProcessing = true;
+        _errorMessage = null;
+        _userInput = string.Empty;
+
+        _messages.Add(new ChatMessage { Role = "user", Content = text });
+
+        var assistantPlaceholder = new ChatMessage { Role = "assistant", IsStreaming = true };
+        _messages.Add(assistantPlaceholder);
+        StateHasChanged();
+
+        try
+        {
+            _threadId ??= await AgentService.CreateThreadAsync();
+
+            var response = await AgentService.SendMessageAsync(_threadId, text);
+
+            var idx = _messages.IndexOf(assistantPlaceholder);
+            if (idx >= 0)
+            {
+                _messages[idx] = response;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to send message");
+            _errorMessage = $"Failed to get a response: {ex.Message}";
+            _messages.Remove(assistantPlaceholder);
+        }
+        finally
+        {
+            _isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task StartNewConversation()
+    {
+        if (_threadId is not null)
+        {
+            await AgentService.DeleteThreadAsync(_threadId);
+            _threadId = null;
+        }
+
+        _messages.Clear();
+        _errorMessage = null;
+        _userInput = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try
+        {
+            await Task.Yield();
+        }
+        catch
+        {
+            // Ignore scroll errors
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_threadId is not null)
+        {
+            await AgentService.DeleteThreadAsync(_threadId);
+        }
+    }
+}
