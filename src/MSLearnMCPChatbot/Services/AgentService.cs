@@ -47,7 +47,7 @@ public class AgentService : IDisposable
         new DefaultAzureCredential(new DefaultAzureCredentialOptions
         {
             // Pin to the tenant where your Azure AI Foundry resource lives
-            TenantId = "fcf67057-50c9-4ad4-98f3-ffca64add9e9"
+            TenantId = ""
         }));
     }
 
